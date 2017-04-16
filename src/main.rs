@@ -23,28 +23,47 @@ fn main() {
     let matches = App::new("File Visualizer")
         .version("1.0")
         .author("Brad Erickson https://github.com/eosrei/file-vis")
-        .about("Create PNG images from binary files")
+        .about("Create PNG images visualizing binary files")
         .arg(Arg::with_name("INPUT")
                  .help("Sets the input file")
                  .required(true)
                  .index(1))
+        .arg(Arg::with_name("output")
+                 .short("o")
+                 .long("output")
+                 .value_name("FILE")
+                 .help("Sets the output PNG file path")
+                 .takes_value(true))
         .get_matches();
 
-    // Read the input file
-    let input_file = matches.value_of("INPUT").unwrap();
-    let path = Path::new(input_file);
-    let display = path.display();
+    // Check the input file
+    let input_arg = matches.value_of("INPUT").unwrap();
+    let input_path = Path::new(input_arg);
+    let input_display = input_path.display();
+    println!("input: {}", input_display);
 
-    if !path.exists() {
-        writeln!(&mut stderr, "file not found: {}", display).unwrap();
+    if !input_path.exists() {
+        writeln!(stderr, "file not found: {}", input_display).unwrap();
         exit(1);
     }
-    let mut file = match File::open(&path) {
-        Err(why) => panic!("couldn't open {}: {}", display, why.description()),
+    let mut file = match File::open(&input_path) {
+        Err(why) => panic!("couldn't open {}: {}", input_display, why.description()),
         Ok(file) => file,
     };
 
-    println!("filename: {}", display);
+    // Check the output file
+    let default_output = format!("{}.png", input_arg);
+    let output_arg = matches.value_of("output").unwrap_or(&default_output);
+    let output_path = Path::new(output_arg);
+    let output_display = output_path.display();
+
+    if output_path.exists() {
+        println!("overwriting: {}", output_display);
+    } else {
+        println!("output: {}", output_display);
+    }
+
+    // Read the input file
     let mut buffer = vec![0];
     file.read_to_end(&mut buffer).unwrap();
 
@@ -64,7 +83,7 @@ fn main() {
 
     // TODO: Find RGB color for each byte
 
-    let path = Path::new("image.png");
+    let path = Path::new(output_path);
     let file = File::create(path).unwrap();
     let ref mut w = BufWriter::new(file);
 
