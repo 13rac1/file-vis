@@ -64,7 +64,7 @@ fn main() {
     }
 
     // Read the input file
-    let mut buffer = vec![0];
+    let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).unwrap();
 
     // Find height/width of square ratio image
@@ -73,25 +73,89 @@ fn main() {
     let height_width = byte_count.sqrt().ceil() as u32;
     println!("image size: {}x{}", height_width, height_width);
 
-    // Pad file byte array to fit image
+    // Pad file byte array with black to fit image
     let missing_count = height_width.pow(2) - byte_count as u32;
     println!("padding bytes: {}", missing_count);
     let mut bytes_missing = vec![0; missing_count as usize];
 
     buffer.append(&mut bytes_missing);
-    println!("final byte count: {}", buffer.len());
+    println!("padded byte count: {}", buffer.len());
 
-    // TODO: Find RGB color for each byte
+    // Procedural, doesn't require Rgb Iterators
+    // let mut out: Vec<u8> = Vec::new();
+    // for i in &buffer {
+    //     let color = Rgb::new(*i);
+    //     out.push(color.red);
+    //     out.push(color.green);
+    //     out.push(color.blue);
+    // }
 
+    // Do it all Functional... http://stackoverflow.com/a/30220832
+    // Find RGB color for each byte and flatten to Vec<u8>
+    let out = buffer
+        .iter()
+        .map(|&x| Rgb::new(x))
+        .flat_map(|x| x)
+        .collect::<Vec<u8>>();
+
+    // Output a PNG
     let path = Path::new(output_path);
     let file = File::create(path).unwrap();
     let ref mut w = BufWriter::new(file);
 
     let mut encoder = png::Encoder::new(w, height_width, height_width);
     encoder
-        .set(png::ColorType::Grayscale)
+        .set(png::ColorType::RGB)
         .set(png::BitDepth::Eight);
     let mut writer = encoder.write_header().unwrap();
 
-    writer.write_image_data(&buffer).unwrap();
+    writer.write_image_data(&out).unwrap();
+}
+
+#[derive(Debug)]
+struct Rgb {
+    red: u8,
+    green: u8,
+    blue: u8,
+}
+
+impl Rgb {
+    fn new(byte: u8) -> Rgb {
+        Rgb {
+            red: byte,
+            green: byte,
+            blue: byte,
+        }
+    }
+}
+
+impl IntoIterator for Rgb {
+    type Item = u8;
+    type IntoIter = RgbIntoIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        RgbIntoIterator {
+            rgb: self,
+            index: 0,
+        }
+    }
+}
+
+struct RgbIntoIterator {
+    rgb: Rgb,
+    index: u8,
+}
+
+impl Iterator for RgbIntoIterator {
+    type Item = u8;
+    fn next(&mut self) -> Option<u8> {
+        let result = match self.index {
+            0 => Some(self.rgb.red),
+            1 => Some(self.rgb.green),
+            2 => Some(self.rgb.blue),
+            _ => return None,
+        };
+        self.index += 1;
+        result
+    }
 }
