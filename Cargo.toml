@@ -1,0 +1,7 @@
+[package]
+authors = ["Brad Erickson <eosrei@gmail.com>"]
+name = "visual-files"
+version = "0.1.0"
+
+[dependencies]
+png = "0.6.2"
