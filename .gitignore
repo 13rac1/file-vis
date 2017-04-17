@@ -7,3 +7,6 @@ venv
 
 # Makefile output
 build
+
+# Website for gh-pages
+dist

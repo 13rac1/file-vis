@@ -19,7 +19,7 @@ source = 'build/images'
 
 # Destination directory. Can be set here or as the second argument of the
 # `sigal build` command (default: '_build')
-destination = 'build/www'
+destination = 'dist'
 
 # Theme :
 # - colorbox (default), galleria, photoswipe, or the path to a custom theme

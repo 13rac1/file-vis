@@ -32,8 +32,12 @@ dist: sigal.conf.py $(SIZEDFILES)
 
 build-all: target/release/file-vis dist
 
+deploy: build-all
+	./deploy.sh
+
 clean:
 	rm -rf build
+	rm -rf dist
 
 clean-all: clean
 	cargo clean
