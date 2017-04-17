@@ -1,6 +1,6 @@
 [package]
-authors = ["Brad Erickson <eosrei@gmail.com>"]
-name = "visual-files"
+authors = ["Brad Erickson"]
+name = "file-vis"
 version = "0.1.0"
 
 [dependencies]

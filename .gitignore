@@ -1,2 +1,6 @@
+# Rust compile output
 target
 Cargo.lock
+
+# Makefile output
+build
