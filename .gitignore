@@ -2,5 +2,8 @@
 target
 Cargo.lock
 
+# Python Sigal Site Generator
+venv
+
 # Makefile output
 build

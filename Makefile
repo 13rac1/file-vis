@@ -1,27 +1,36 @@
 SRCFILES  := $(wildcard files/*)
-VISFILES  := $(patsubst files/%, build/%.png, $(SRCFILES))
+VISFILES  := $(patsubst files/%, build/png/%.png, $(SRCFILES))
 SIZEDFILES:= $(patsubst files/%, build/images/%.png, $(SRCFILES))
 
-.PHONY: all images build-all clean clean-all
+.PHONY: all images build-all clean clean-all dist
 
 all: build-all
 
 target/release/file-vis: src/main.rs
 	cargo build --release
 
-build/%.png: files/% | build
+build/png/%.png: files/%| build/png
 	target/release/file-vis "$<" -o "$@"
 
-build/images/%.png: build/%.png | build/images
+build/images/%.png: build/png/%.png | build/images
 	convert "$<" -sample 600x600 "$@"
 
 build:
 	mkdir build
 
+build/png: | build
+	mkdir build/png
+
 build/images: | build
 	mkdir build/images
 
-build-all: target/release/file-vis $(SIZEDFILES)
+dist: sigal.conf.py $(SIZEDFILES)
+	cp text/* build/images/
+	target/release/file-vis src/main.rs -o build/png/file-vis.rs.png
+	convert build/png/file-vis.rs.png -sample 600x600 build/images/0file-vis.rs.png
+	sigal build
+
+build-all: target/release/file-vis dist
 
 clean:
 	rm -rf build
