@@ -5,4 +5,5 @@ version = "0.1.0"
 
 [dependencies]
 clap = "2.23.2"
-png = "0.6.2"
+image = "0.12.3"
+palette = "0.2.1"

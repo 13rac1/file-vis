@@ -1,8 +1,6 @@
 // File Visualizer
 // 2017 Brad Erickson
-
-extern crate png;
-extern crate clap;
+// Warning: Here be my first Rust program.
 
 use std::process::exit;
 use std::error::Error;
@@ -10,10 +8,14 @@ use std::fs::File;
 use std::path::Path;
 use std::io::Read;
 use std::io::Write;
-use std::io::BufWriter;
 
+extern crate clap;
 use clap::{Arg, App};
-use png::HasParameters;
+
+extern crate palette;
+use palette::{Rgb, RgbHue, Hsv, FromColor};
+
+extern crate image;
 
 fn main() {
     // Setup stderr
@@ -94,59 +96,91 @@ fn main() {
     // Find RGB color for each byte and flatten to Vec<u8>
     let out = buffer
         .iter()
-        .map(|&x| Rgb::new(x))
+        .map(|&x| Vrgb::new_byte(x))
         .flat_map(|x| x)
         .collect::<Vec<u8>>();
 
     // Output a PNG
-    let path = Path::new(output_path);
-    let file = File::create(path).unwrap();
-    let ref mut w = BufWriter::new(file);
-
-    let mut encoder = png::Encoder::new(w, height_width, height_width);
-    encoder
-        .set(png::ColorType::RGB)
-        .set(png::BitDepth::Eight);
-    let mut writer = encoder.write_header().unwrap();
-
-    writer.write_image_data(&out).unwrap();
+    image::save_buffer(output_path, &out, height_width, height_width, image::RGB(8)).unwrap();
 }
 
 #[derive(Debug)]
-struct Rgb {
+struct Vrgb {
     red: u8,
     green: u8,
     blue: u8,
 }
 
-impl Rgb {
-    fn new(byte: u8) -> Rgb {
-        Rgb {
-            red: byte,
-            green: byte,
-            blue: byte,
+impl Vrgb {
+    fn new(red: u8, green: u8, blue: u8) -> Vrgb {
+        Vrgb {
+            red: red,
+            green: green,
+            blue: blue,
         }
+    }
+
+    fn new_byte(byte: u8) -> Vrgb {
+        let colors = match byte {
+            1...32 => Vrgb::get_control(byte - 1), // Control Characters
+            33...126 => Vrgb::get_printable(byte - 33), // Printable Characters
+            127 => Vrgb::get_control(32), // Delete Character
+            128...255 => Vrgb::get_extended(byte - 128), // Extended Characters
+            _ => (0, 0, 0), // Null
+        };
+
+        Vrgb::new(colors.0, colors.1, colors.2)
+    }
+
+    fn get_colors(hsv: Hsv<f64>) -> (u8, u8, u8) {
+        // HSV Colors: 0 = red, 120 = green, 240 = blue.
+        let rgb = Rgb::from_hsv(hsv);
+        ((rgb.red * 255f64) as u8, (rgb.green * 255f64) as u8, (rgb.blue * 255f64) as u8)
+    }
+
+    fn get_control(value: u8) -> (u8, u8, u8) {
+        // Expects 0..32, converts to a 32 range.
+        let range = value as f64;
+        let hue = 180.0 + range - 16.0;
+        let hsv = Hsv::new(RgbHue::from(hue), 1.0, 0.5);
+        Vrgb::get_colors(hsv)
+    }
+
+    fn get_printable(value: u8) -> (u8, u8, u8) {
+        // Expects 0..93, converts to a 32 range.
+        let range = value as f64 / 93.0 * 32.0;
+        let hue = 240.0 + range - 16.0;
+        let hsv = Hsv::new(RgbHue::from(hue), 1.0, 0.5);
+        Vrgb::get_colors(hsv)
+    }
+
+    fn get_extended(value: u8) -> (u8, u8, u8) {
+        // Expects 0..127, converts to a 32 range.
+        let range = value as f64 / 127.0 * 32.0;
+        let hue = 300.0 + range - 16.0;
+        let hsv = Hsv::new(RgbHue::from(hue), 1.0, 0.5);
+        Vrgb::get_colors(hsv)
     }
 }
 
-impl IntoIterator for Rgb {
+impl IntoIterator for Vrgb {
     type Item = u8;
-    type IntoIter = RgbIntoIterator;
+    type IntoIter = VrgbIntoIterator;
 
     fn into_iter(self) -> Self::IntoIter {
-        RgbIntoIterator {
+        VrgbIntoIterator {
             rgb: self,
             index: 0,
         }
     }
 }
 
-struct RgbIntoIterator {
-    rgb: Rgb,
+struct VrgbIntoIterator {
+    rgb: Vrgb,
     index: u8,
 }
 
-impl Iterator for RgbIntoIterator {
+impl Iterator for VrgbIntoIterator {
     type Item = u8;
     fn next(&mut self) -> Option<u8> {
         let result = match self.index {
