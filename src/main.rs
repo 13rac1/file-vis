@@ -15,6 +15,9 @@ use clap::{Arg, App};
 extern crate palette;
 use palette::{Rgb, RgbHue, Hsv, FromColor};
 
+extern crate sha2;
+use sha2::{Sha256, Digest};
+
 extern crate image;
 
 fn main() {
@@ -75,6 +78,13 @@ fn main() {
     let height_width = byte_count.sqrt().ceil() as u32;
     println!("image size: {}x{}", height_width, height_width);
 
+    let mut hasher = Sha256::default();
+    hasher.input(&buffer);
+    // Get the first u8 from the hash result and scale to [0,360]
+    let primary_hue = hasher.result()[0] as f64 / 255.0 * 360.0;
+    println!("primary hue from hash: {:.2}", primary_hue);
+    let secondary_hue = (primary_hue + 180.0) % 360.0;
+
     // Pad file byte array with black to fit image
     let missing_count = height_width.pow(2) - byte_count as u32;
     println!("padding bytes: {}", missing_count);
@@ -83,6 +93,8 @@ fn main() {
     buffer.append(&mut bytes_missing);
     println!("padded byte count: {}", buffer.len());
 
+
+    println!("calculating...");
     // Procedural, doesn't require Rgb Iterators
     // let mut out: Vec<u8> = Vec::new();
     // for i in &buffer {
@@ -96,12 +108,13 @@ fn main() {
     // Find RGB color for each byte and flatten to Vec<u8>
     let out = buffer
         .iter()
-        .map(|&x| Vrgb::new_byte(x))
+        .map(|&x| Vrgb::new_byte(x, primary_hue, secondary_hue))
         .flat_map(|x| x)
         .collect::<Vec<u8>>();
 
-    // Output a PNG
+    println!("writing...");
     image::save_buffer(output_path, &out, height_width, height_width, image::RGB(8)).unwrap();
+    println!("Done.");
 }
 
 #[derive(Debug)]
@@ -120,12 +133,12 @@ impl Vrgb {
         }
     }
 
-    fn new_byte(byte: u8) -> Vrgb {
+    fn new_byte(byte: u8, primary_hue: f64, secondary_hue: f64) -> Vrgb {
         let colors = match byte {
-            1...32 => Vrgb::get_control(byte - 1), // Control Characters
-            33...126 => Vrgb::get_printable(byte - 33), // Printable Characters
-            127 => Vrgb::get_control(32), // Delete Character
-            128...255 => Vrgb::get_extended(byte - 128), // Extended Characters
+            1...32 => Vrgb::get_control(byte - 1, secondary_hue), // Control Characters + Space
+            33...126 => Vrgb::get_printable(byte - 33, primary_hue), // Printable Characters
+            127 => Vrgb::get_control(32, secondary_hue), // Delete Character
+            128...255 => Vrgb::get_extended(byte - 128, primary_hue), // Extended Characters
             _ => (0, 0, 0), // Null
         };
 
@@ -138,27 +151,28 @@ impl Vrgb {
         ((rgb.red * 255f64) as u8, (rgb.green * 255f64) as u8, (rgb.blue * 255f64) as u8)
     }
 
-    fn get_control(value: u8) -> (u8, u8, u8) {
+    fn get_control(value: u8, hue: f64) -> (u8, u8, u8) {
         // Expects 0..32, converts to a 32 range.
         let range = value as f64;
-        let hue = 180.0 + range - 16.0;
-        let hsv = Hsv::new(RgbHue::from(hue), 1.0, 0.5);
+        let hue = (hue + range - 16.0) % 360.0;
+        let hsv = Hsv::new(RgbHue::from(hue), 0.7, 0.7);
         Vrgb::get_colors(hsv)
     }
 
-    fn get_printable(value: u8) -> (u8, u8, u8) {
-        // Expects 0..93, converts to a 32 range.
-        let range = value as f64 / 93.0 * 32.0;
-        let hue = 240.0 + range - 16.0;
-        let hsv = Hsv::new(RgbHue::from(hue), 1.0, 0.5);
+    fn get_printable(value: u8, hue: f64) -> (u8, u8, u8) {
+        // Expects 0..93, converts to a 64 range.
+        let range = value as f64 / 93.0 * 64.0;
+        let hue = (hue + range - 32.0) % 360.0;
+        let hsv = Hsv::new(RgbHue::from(hue), 0.7, 0.7);
         Vrgb::get_colors(hsv)
     }
 
-    fn get_extended(value: u8) -> (u8, u8, u8) {
-        // Expects 0..127, converts to a 32 range.
-        let range = value as f64 / 127.0 * 32.0;
-        let hue = 300.0 + range - 16.0;
-        let hsv = Hsv::new(RgbHue::from(hue), 1.0, 0.5);
+    fn get_extended(value: u8, hue: f64) -> (u8, u8, u8) {
+        // Expects 0..127, converts to a 64 range.
+        let range = value as f64 / 127.0 * 64.0;
+        let hue = (hue + range - 32.0) % 360.0;
+        // Dark saturated version of hue
+        let hsv = Hsv::new(RgbHue::from(hue), 0.8, 0.5);
         Vrgb::get_colors(hsv)
     }
 }
