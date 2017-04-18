@@ -8,3 +8,11 @@ test:
   override:
     - docker run -it -v $(pwd):/source jimmycuadra/rust:1.16.0 cargo build --release
     - make build-all
+
+deployment:
+  production:
+    branch: master
+    commands:
+      - git config --global user.email $GITHUB_EMAIL
+      - git config --global user.name "CI"
+      - ./deploy.sh
