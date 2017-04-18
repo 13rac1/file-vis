@@ -32,8 +32,9 @@ dist: sigal.conf.py $(SIZEDFILES)
 	$(FILEVIS) $(FILEVIS) -o build/png/file-vis-compiled.png
 	convert build/png/file-vis-compiled.png -sample 600x600 build/images/0file-vis-compiled.png
 
-	cp text/* build/images/
+	cp src-site/index.md build/images/
 	sigal build
+	cp src-site/circle.yml dist/
 
 build-all: $(FILEVIS) dist
 
