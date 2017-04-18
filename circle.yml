@@ -1,0 +1,10 @@
+machine:
+  python:
+    version: 3.5.3
+  services:
+    - docker
+
+test:
+  override:
+    - docker run -it -v $(pwd):/source jimmycuadra/rust:1.16.0 cargo build --release
+    - make build-all
