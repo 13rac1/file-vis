@@ -1,16 +1,18 @@
-SRCFILES  := $(wildcard files/*)
-VISFILES  := $(patsubst files/%, build/png/%.png, $(SRCFILES))
-SIZEDFILES:= $(patsubst files/%, build/images/%.png, $(SRCFILES))
+SRCFILES   := $(wildcard files/*)
+VISFILES   := $(patsubst files/%, build/png/%.png, $(SRCFILES))
+SIZEDFILES := $(patsubst files/%, build/images/%.png, $(SRCFILES))
+
+FILEVIS := target/release/file-vis
 
 .PHONY: all images build-all clean clean-all dist
 
 all: build-all
 
-target/release/file-vis: src/main.rs
+$(FILEVIS): src/main.rs
 	cargo build --release
 
 build/png/%.png: files/%| build/png
-	target/release/file-vis "$<" -o "$@"
+	$(FILEVIS) "$<" -o "$@"
 
 build/images/%.png: build/png/%.png | build/images
 	convert "$<" -sample 600x600 "$@"
@@ -25,12 +27,15 @@ build/images: | build
 	mkdir build/images
 
 dist: sigal.conf.py $(SIZEDFILES)
+	$(FILEVIS) src/main.rs -o build/png/file-vis-main.rs.png
+	convert build/png/file-vis-main.rs.png -sample 600x600 build/images/0file-vis-main.rs.png
+	$(FILEVIS) $(FILEVIS) -o build/png/file-vis-compiled.png
+	convert build/png/file-vis-compiled.png -sample 600x600 build/images/0file-vis-compiled.png
+
 	cp text/* build/images/
-	target/release/file-vis src/main.rs -o build/png/file-vis.rs.png
-	convert build/png/file-vis.rs.png -sample 600x600 build/images/0file-vis.rs.png
 	sigal build
 
-build-all: target/release/file-vis dist
+build-all: $(FILEVIS) dist
 
 deploy: build-all
 	./deploy.sh
