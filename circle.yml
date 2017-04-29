@@ -4,9 +4,15 @@ machine:
   services:
     - docker
 
+# Cache the Rust build
+dependencies:
+  cache_directories:
+    - target
+  pre:
+    - docker run -it -v $(pwd):/source jimmycuadra/rust:1.16.0 cargo build --release
+
 test:
   override:
-    - docker run -it -v $(pwd):/source jimmycuadra/rust:1.16.0 cargo build --release
     - make build-all
 
 deployment:
