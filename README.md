@@ -2,6 +2,8 @@
 
 Visualizing binary file formats
 
+[![Example images](example.png?raw=true)](https://eosrei.github.io/file-vis/)
+
 ## Intro
 
 Electronic files are made up of structured data including headers, delimiters
